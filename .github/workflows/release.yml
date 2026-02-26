@@ -11,17 +11,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.0.0
+        uses: actions/checkout@v6.0.2
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4.0.0
+        uses: actions/setup-java@v5.2.0
         with:
           java-version: '25'
           distribution: 'temurin'
           cache: 'maven'
 
       - name: Read Maven settings
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .github/settings.xml
           key: maven-settings-${{ github.run_id }}
@@ -40,7 +40,7 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.0.0
+        uses: softprops/action-gh-release@v2.5.0
         with:
           files: target/*.jar
           generate_release_notes: true
