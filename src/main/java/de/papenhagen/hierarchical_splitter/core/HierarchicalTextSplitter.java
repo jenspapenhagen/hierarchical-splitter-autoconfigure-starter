@@ -1,8 +1,5 @@
 package de.papenhagen.hierarchical_splitter.core;
 
-import org.springframework.ai.document.Document;
-import org.springframework.ai.transformer.splitter.TextSplitter;
-
 import java.io.BufferedReader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
@@ -14,8 +11,13 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.transformer.splitter.TextSplitter;
 
-public class HierarchicalTextSplitter extends TextSplitter {
+/**
+ * Splits markdown documents into hierarchical chunks suitable for RAG applications.
+ */
+public final class HierarchicalTextSplitter extends TextSplitter {
 
     private static final Pattern HEADING = Pattern.compile("^(#{1,6})\\s+(.*)$");
     private static final Pattern LIST_ITEM = Pattern.compile("^\\s*([-*+]|\\d+\\.)\\s+(.+)$");
@@ -25,6 +27,13 @@ public class HierarchicalTextSplitter extends TextSplitter {
     private static final Pattern FENCE = Pattern.compile("^(```|~~~)");
     private static final Pattern BLOCKQUOTE = Pattern.compile("^>\\s*(.*)$");
     private static final Pattern HORIZONTAL_RULE = Pattern.compile("^[-*_]{3,}\\s*$");
+
+    private static final int DEFAULT_MAX_TOKENS = 1000;
+    private static final int DEFAULT_MAX_CODE_LINES = 20;
+    private static final int DEFAULT_MAX_TABLE_ROWS = 15;
+    private static final int DEFAULT_MAX_LIST_ITEMS = 15;
+    private static final int DEFAULT_MAX_BLOCKQUOTE_LINES = 15;
+    private static final int READER_MARK_LIMIT = 10000;
 
     private final int maxTokens;
     private final int maxCodeLines;
@@ -36,7 +45,7 @@ public class HierarchicalTextSplitter extends TextSplitter {
     private final boolean processHorizontalRules;
     private TokenCounter tokenCounter;
 
-    private HierarchicalTextSplitter(Builder builder) {
+    private HierarchicalTextSplitter(final Builder builder) {
         this.maxTokens = builder.maxTokens;
         this.maxCodeLines = builder.maxCodeLines;
         this.maxTableRows = builder.maxTableRows;
@@ -50,23 +59,38 @@ public class HierarchicalTextSplitter extends TextSplitter {
                 : new OpenAITokenCounter();
     }
 
+    /**
+     * Creates a HierarchicalTextSplitter with default settings.
+     *
+     * @param maxTokens the maximum number of tokens per chunk
+     */
     public HierarchicalTextSplitter(final int maxTokens) {
         this.maxTokens = maxTokens;
-        this.maxCodeLines = 20;
-        this.maxTableRows = 15;
-        this.maxListItems = 15;
-        this.maxBlockquoteLines = 15;
+        this.maxCodeLines = DEFAULT_MAX_CODE_LINES;
+        this.maxTableRows = DEFAULT_MAX_TABLE_ROWS;
+        this.maxListItems = DEFAULT_MAX_LIST_ITEMS;
+        this.maxBlockquoteLines = DEFAULT_MAX_BLOCKQUOTE_LINES;
         this.preserveCodeLanguage = true;
         this.processBlockquotes = true;
         this.processHorizontalRules = true;
         this.tokenCounter = new OpenAITokenCounter();
     }
 
+    /**
+     * Creates a new Builder instance.
+     *
+     * @return a new Builder
+     */
     public static Builder builder() {
         return new Builder();
     }
 
-    public void setTokenCounter(TokenCounter tokenCounter) {
+    /**
+     * Sets the token counter to use for counting tokens.
+     *
+     * @param tokenCounter the token counter
+     */
+    public void setTokenCounter(final TokenCounter tokenCounter) {
         this.tokenCounter = tokenCounter;
     }
 
@@ -118,7 +142,8 @@ public class HierarchicalTextSplitter extends TextSplitter {
                         inCodeBlock = false;
 
                         if (codeBuffer.size() - 2 <= maxCodeLines) {
-                            flushBufferIfNeeded(chunks, document, headings, stringBuilder);
+                            flushBufferIfNeeded(chunks, document, headings,
+                                    stringBuilder);
                             emitChunk(chunks, document, headings,
                                     String.join("\n", codeBuffer));
                         } else {
@@ -142,10 +167,10 @@ public class HierarchicalTextSplitter extends TextSplitter {
                     if (blockquoteMatcher.matches()) {
                         blockquoteBuffer.add(blockquoteMatcher.group(1));
 
-                        reader.mark(10000);
+                        reader.mark(READER_MARK_LIMIT);
                         String next;
                         while ((next = reader.readLine()) != null) {
-                            Matcher nextMatcher = BLOCKQUOTE.matcher(next);
+                            final Matcher nextMatcher = BLOCKQUOTE.matcher(next);
                             if (nextMatcher.matches()) {
                                 blockquoteBuffer.add(nextMatcher.group(1));
                             } else {
@@ -158,7 +183,8 @@ public class HierarchicalTextSplitter extends TextSplitter {
                         }
 
                         if (blockquoteBuffer.size() <= maxBlockquoteLines) {
-                            flushBufferIfNeeded(chunks, document, headings, stringBuilder);
+                            flushBufferIfNeeded(chunks, document, headings,
+                                    stringBuilder);
                             emitChunk(chunks, document, headings,
                                     blockquoteBuffer.stream()
                                             .map(s -> "> " + s)
@@ -178,7 +204,8 @@ public class HierarchicalTextSplitter extends TextSplitter {
                 if (processHorizontalRules) {
                     final Matcher hrMatcher = HORIZONTAL_RULE.matcher(line);
                     if (hrMatcher.matches()) {
-                        flushBufferIfNeeded(chunks, document, headings, stringBuilder);
+                        flushBufferIfNeeded(chunks, document, headings,
+                                stringBuilder);
                         emitChunk(chunks, document, headings, line);
                         continue;
                     }
@@ -186,7 +213,8 @@ public class HierarchicalTextSplitter extends TextSplitter {
 
                 final Matcher headingMatcher = HEADING.matcher(line);
                 if (headingMatcher.matches()) {
-                    flushBufferIfNeeded(chunks, document, headings, stringBuilder);
+                    flushBufferIfNeeded(chunks, document, headings,
+                            stringBuilder);
 
                     final int level = headingMatcher.group(1).length();
                     final String text = headingMatcher.group(2).trim();
@@ -199,7 +227,7 @@ public class HierarchicalTextSplitter extends TextSplitter {
                 final Matcher tableMatcher = TABLE_ROW.matcher(line);
                 if (tableMatcher.matches()) {
                     tableBuffer.add(line);
-                    reader.mark(10000);
+                    reader.mark(READER_MARK_LIMIT);
 
                     String next;
                     while ((next = reader.readLine()) != null
@@ -213,7 +241,8 @@ public class HierarchicalTextSplitter extends TextSplitter {
                     }
 
                     if (tableBuffer.size() <= maxTableRows) {
-                        flushBufferIfNeeded(chunks, document, headings, stringBuilder);
+                        flushBufferIfNeeded(chunks, document, headings,
+                                stringBuilder);
                         emitChunk(chunks, document, headings,
                                 String.join("\n", tableBuffer));
                     } else {
@@ -226,11 +255,12 @@ public class HierarchicalTextSplitter extends TextSplitter {
 
                 final Matcher listMatcher = LIST_ITEM.matcher(line);
                 final boolean isListItem = listMatcher.matches();
-                final boolean isContinuation = !listBuffer.isEmpty() && LIST_CONTINUATION.matcher(line).matches();
+                final boolean isContinuation = !listBuffer.isEmpty()
+                        && LIST_CONTINUATION.matcher(line).matches();
 
                 if (isListItem || isContinuation) {
                     if (listBuffer.isEmpty()) {
-                        reader.mark(10000);
+                        reader.mark(READER_MARK_LIMIT);
                         listBuffer.add(line);
 
                         String next;
@@ -245,7 +275,8 @@ public class HierarchicalTextSplitter extends TextSplitter {
                         }
 
                         if (listBuffer.size() <= maxListItems) {
-                            flushBufferIfNeeded(chunks, document, headings, stringBuilder);
+                            flushBufferIfNeeded(chunks, document, headings,
+                                    stringBuilder);
                             emitChunk(chunks, document, headings,
                                     String.join("\n", listBuffer));
                         } else {
@@ -292,7 +323,8 @@ public class HierarchicalTextSplitter extends TextSplitter {
         }
     }
 
-    private void appendToBuffer(final StringBuilder stringBuilder, final List<String> lines) {
+    private void appendToBuffer(final StringBuilder stringBuilder,
+                                final List<String> lines) {
         for (final String line : lines) {
             stringBuilder.append(line).append("\n");
         }
@@ -338,101 +370,211 @@ public class HierarchicalTextSplitter extends TextSplitter {
         }
     }
 
+    /**
+     * Returns the maximum number of tokens per chunk.
+     *
+     * @return the max tokens
+     */
     public int getMaxTokens() {
         return maxTokens;
     }
 
+    /**
+     * Returns the maximum number of lines in a code block.
+     *
+     * @return the max code lines
+     */
     public int getMaxCodeLines() {
         return maxCodeLines;
     }
 
+    /**
+     * Returns the maximum number of rows in a table.
+     *
+     * @return the max table rows
+     */
     public int getMaxTableRows() {
         return maxTableRows;
     }
 
+    /**
+     * Returns the maximum number of list items.
+     *
+     * @return the max list items
+     */
     public int getMaxListItems() {
         return maxListItems;
     }
 
+    /**
+     * Returns the maximum number of lines in a blockquote.
+     *
+     * @return the max blockquote lines
+     */
     public int getMaxBlockquoteLines() {
         return maxBlockquoteLines;
     }
 
+    /**
+     * Returns whether to preserve code language annotations.
+     *
+     * @return true if preserving code language
+     */
     public boolean isPreserveCodeLanguage() {
         return preserveCodeLanguage;
     }
 
+    /**
+     * Returns whether to process blockquotes.
+     *
+     * @return true if processing blockquotes
+     */
     public boolean isProcessBlockquotes() {
         return processBlockquotes;
     }
 
+    /**
+     * Returns whether to process horizontal rules.
+     *
+     * @return true if processing horizontal rules
+     */
     public boolean isProcessHorizontalRules() {
         return processHorizontalRules;
     }
 
+    /**
+     * Returns the token counter.
+     *
+     * @return the token counter
+     */
     public TokenCounter getTokenCounter() {
         return tokenCounter;
     }
 
-    public static class Builder {
-        private int maxTokens = 1000;
-        private int maxCodeLines = 20;
-        private int maxTableRows = 15;
-        private int maxListItems = 15;
-        private int maxBlockquoteLines = 15;
+    /**
+     * Builder for HierarchicalTextSplitter.
+     */
+    public static final class Builder {
+        private int maxTokens = DEFAULT_MAX_TOKENS;
+        private int maxCodeLines = DEFAULT_MAX_CODE_LINES;
+        private int maxTableRows = DEFAULT_MAX_TABLE_ROWS;
+        private int maxListItems = DEFAULT_MAX_LIST_ITEMS;
+        private int maxBlockquoteLines = DEFAULT_MAX_BLOCKQUOTE_LINES;
         private boolean preserveCodeLanguage = true;
         private boolean processBlockquotes = true;
         private boolean processHorizontalRules = true;
         private TokenCounter tokenCounter;
 
+        /**
+         * Creates a new Builder.
+         */
         public Builder() {
         }
 
-        public Builder maxTokens(int maxTokens) {
+        /**
+         * Sets the maximum number of tokens per chunk.
+         *
+         * @param maxTokens the max tokens
+         * @return this builder
+         */
+        public Builder maxTokens(final int maxTokens) {
             this.maxTokens = maxTokens;
             return this;
         }
 
-        public Builder maxCodeLines(int maxCodeLines) {
+        /**
+         * Sets the maximum number of lines in a code block.
+         *
+         * @param maxCodeLines the max code lines
+         * @return this builder
+         */
+        public Builder maxCodeLines(final int maxCodeLines) {
             this.maxCodeLines = maxCodeLines;
             return this;
         }
 
-        public Builder maxTableRows(int maxTableRows) {
+        /**
+         * Sets the maximum number of rows in a table.
+         *
+         * @param maxTableRows the max table rows
+         * @return this builder
+         */
+        public Builder maxTableRows(final int maxTableRows) {
             this.maxTableRows = maxTableRows;
             return this;
         }
 
-        public Builder maxListItems(int maxListItems) {
+        /**
+         * Sets the maximum number of list items.
+         *
+         * @param maxListItems the max list items
+         * @return this builder
+         */
+        public Builder maxListItems(final int maxListItems) {
             this.maxListItems = maxListItems;
             return this;
         }
 
-        public Builder maxBlockquoteLines(int maxBlockquoteLines) {
+        /**
+         * Sets the maximum number of lines in a blockquote.
+         *
+         * @param maxBlockquoteLines the max blockquote lines
+         * @return this builder
+         */
+        public Builder maxBlockquoteLines(final int maxBlockquoteLines) {
             this.maxBlockquoteLines = maxBlockquoteLines;
             return this;
         }
 
-        public Builder preserveCodeLanguage(boolean preserveCodeLanguage) {
+        /**
+         * Sets whether to preserve code language annotations.
+         *
+         * @param preserveCodeLanguage true to preserve
+         * @return this builder
+         */
+        public Builder preserveCodeLanguage(final boolean preserveCodeLanguage) {
             this.preserveCodeLanguage = preserveCodeLanguage;
             return this;
         }
 
-        public Builder processBlockquotes(boolean processBlockquotes) {
+        /**
+         * Sets whether to process blockquotes.
+         *
+         * @param processBlockquotes true to process
+         * @return this builder
+         */
+        public Builder processBlockquotes(final boolean processBlockquotes) {
             this.processBlockquotes = processBlockquotes;
             return this;
         }
 
-        public Builder processHorizontalRules(boolean processHorizontalRules) {
+        /**
+         * Sets whether to process horizontal rules.
+         *
+         * @param processHorizontalRules true to process
+         * @return this builder
+         */
+        public Builder processHorizontalRules(final boolean processHorizontalRules) {
             this.processHorizontalRules = processHorizontalRules;
             return this;
         }
 
-        public Builder tokenCounter(TokenCounter tokenCounter) {
+        /**
+         * Sets the token counter to use.
+         *
+         * @param tokenCounter the token counter
+         * @return this builder
+         */
+        public Builder tokenCounter(final TokenCounter tokenCounter) {
             this.tokenCounter = tokenCounter;
             return this;
         }
 
+        /**
+         * Builds the HierarchicalTextSplitter.
+         *
+         * @return the splitter
+         */
         public HierarchicalTextSplitter build() {
             return new HierarchicalTextSplitter(this);
         }
