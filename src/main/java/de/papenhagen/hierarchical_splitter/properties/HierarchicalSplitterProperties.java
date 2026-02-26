@@ -1,12 +1,12 @@
 package de.papenhagen.hierarchical_splitter.properties;
 
+import java.util.Objects;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
-
-import java.util.Objects;
 
 /**
  * Configuration properties for HierarchicalTextSplitter.

@@ -1,7 +1,6 @@
 package de.papenhagen.hierarchical_splitter.core;
 
 import java.util.Optional;
-
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
