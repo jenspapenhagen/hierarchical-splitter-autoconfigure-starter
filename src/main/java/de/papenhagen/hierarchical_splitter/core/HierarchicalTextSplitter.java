@@ -306,6 +306,8 @@ public final class HierarchicalTextSplitter extends TextSplitter {
                 emitChunk(chunks, document, headings, stringBuilder.toString());
             }
 
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Streaming split failed", e);
         }
