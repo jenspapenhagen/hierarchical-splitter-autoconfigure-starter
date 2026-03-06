@@ -13,6 +13,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TextSplitter;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Splits markdown documents into hierarchical chunks suitable for RAG applications.
@@ -90,7 +92,7 @@ public final class HierarchicalTextSplitter extends TextSplitter {
      *
      * @param tokenCounter the token counter
      */
-    public void setTokenCounter(final TokenCounter tokenCounter) {
+    public void setTokenCounter(@Nullable final TokenCounter tokenCounter) {
         this.tokenCounter = tokenCounter;
     }
 
@@ -100,7 +102,8 @@ public final class HierarchicalTextSplitter extends TextSplitter {
     }
 
     @Override
-    public List<Document> apply(final List<Document> documents) {
+    @NonNull
+    public List<Document> apply(@NonNull final List<Document> documents) {
         final List<Document> result = new ArrayList<>();
 
         for (final Document document : documents) {
@@ -306,10 +309,8 @@ public final class HierarchicalTextSplitter extends TextSplitter {
                 emitChunk(chunks, document, headings, stringBuilder.toString());
             }
 
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("Streaming split failed", e);
+        } catch (final java.io.IOException e) {
+            throw new java.io.UncheckedIOException("Streaming split failed", e);
         }
 
         return chunks;
@@ -358,6 +359,7 @@ public final class HierarchicalTextSplitter extends TextSplitter {
                 .build());
     }
 
+    @SuppressWarnings("PMD.AvoidThrowingRawExceptionTypes")
     private static String sha256(final String input) {
         try {
             final MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -367,8 +369,8 @@ public final class HierarchicalTextSplitter extends TextSplitter {
                 stringBuilder.append(String.format("%02x", b));
             }
             return stringBuilder.toString();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (final java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
         }
     }
 

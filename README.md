@@ -1,6 +1,7 @@
 # Hierarchical Text Splitter
 
-A Spring Boot starter library for splitting markdown documents into hierarchical chunks suitable for RAG (Retrieval-Augmented Generation) applications.
+A Spring Boot starter library for splitting Markdown documents into hierarchical chunks 
+suitable for RAG (Retrieval-Augmented Generation) applications.
 
 ## Features
 
@@ -30,8 +31,8 @@ implementation 'de.papenhagen:hierarchical-splitter-starter:1.0.0'
 
 ## Requirements
 
-- Java 21+
-- Spring Boot 3.2.5+
+- Java 25
+- Spring Boot 4+
 - Spring AI 2.0.0-M2+
 
 ## Quick Start

@@ -4,17 +4,20 @@ import java.util.Optional;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Token counter using OpenAI's encoding.
  */
+@SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 public final class OpenAITokenCounter implements TokenCounter {
 
     private static final EncodingRegistry REGISTRY = Encodings.newDefaultEncodingRegistry();
     private static final Optional<Encoding> ENCODING = REGISTRY.getEncoding("cl100k_base");
 
     @Override
-    public int count(final String text) {
+    public int count(@Nullable final String text) {
         if (text == null || text.isBlank()) {
             return 0;
         }
@@ -28,7 +31,8 @@ public final class OpenAITokenCounter implements TokenCounter {
      * @param encodingName the encoding name
      * @return the token counter
      */
-    public static TokenCounter withEncoding(final String encodingName) {
+    @NonNull
+    public static TokenCounter withEncoding(@NonNull final String encodingName) {
         return text -> {
             if (text == null || text.isBlank()) {
                 return 0;

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Configuration properties for HierarchicalTextSplitter.
@@ -47,6 +48,32 @@ public final class HierarchicalSplitterProperties {
     private boolean processHorizontalRules = true;
 
     private boolean enabled = true;
+
+    private TokenCounterType tokenCounterType = TokenCounterType.OPENAI;
+
+    private String tokenCounterEncoding = "cl100k_base";
+
+    /**
+     * Token counter types supported by the splitter.
+     */
+    public enum TokenCounterType {
+        /**
+         * Use OpenAI's cl100k_base encoding.
+         */
+        OPENAI,
+        /**
+         * Use Anthropic-compatible token counting.
+         */
+        ANTHROPIC,
+        /**
+         * Use word count as a simple approximation.
+         */
+        WORD_COUNT,
+        /**
+         * Use a custom token counter bean.
+         */
+        CUSTOM
+    }
 
     /**
      * Creates a new instance.
@@ -204,6 +231,44 @@ public final class HierarchicalSplitterProperties {
         this.enabled = enabled;
     }
 
+    /**
+     * Returns the token counter type.
+     *
+     * @return the token counter type
+     */
+    @NonNull
+    public TokenCounterType getTokenCounterType() {
+        return tokenCounterType;
+    }
+
+    /**
+     * Sets the token counter type.
+     *
+     * @param tokenCounterType the token counter type
+     */
+    public void setTokenCounterType(@NonNull final TokenCounterType tokenCounterType) {
+        this.tokenCounterType = tokenCounterType;
+    }
+
+    /**
+     * Returns the token counter encoding.
+     *
+     * @return the encoding
+     */
+    @NonNull
+    public String getTokenCounterEncoding() {
+        return tokenCounterEncoding;
+    }
+
+    /**
+     * Sets the token counter encoding.
+     *
+     * @param tokenCounterEncoding the encoding
+     */
+    public void setTokenCounterEncoding(@NonNull final String tokenCounterEncoding) {
+        this.tokenCounterEncoding = tokenCounterEncoding;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -221,14 +286,16 @@ public final class HierarchicalSplitterProperties {
                 && preserveCodeLanguage == that.preserveCodeLanguage
                 && processBlockquotes == that.processBlockquotes
                 && processHorizontalRules == that.processHorizontalRules
-                && enabled == that.enabled;
+                && enabled == that.enabled
+                && tokenCounterType == that.tokenCounterType
+                && tokenCounterEncoding.equals(that.tokenCounterEncoding);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(maxTokens, maxCodeLines, maxTableRows, maxListItems,
                 preserveCodeLanguage, processBlockquotes,
-                processHorizontalRules, enabled);
+                processHorizontalRules, enabled, tokenCounterType, tokenCounterEncoding);
     }
 
     @Override
@@ -242,6 +309,8 @@ public final class HierarchicalSplitterProperties {
                 + ", processBlockquotes=" + processBlockquotes
                 + ", processHorizontalRules=" + processHorizontalRules
                 + ", enabled=" + enabled
+                + ", tokenCounterType=" + tokenCounterType
+                + ", tokenCounterEncoding='" + tokenCounterEncoding + '\''
                 + '}';
     }
 
@@ -259,7 +328,9 @@ public final class HierarchicalSplitterProperties {
                 .preserveCodeLanguage(preserveCodeLanguage)
                 .processBlockquotes(processBlockquotes)
                 .processHorizontalRules(processHorizontalRules)
-                .enabled(enabled);
+                .enabled(enabled)
+                .tokenCounterType(tokenCounterType)
+                .tokenCounterEncoding(tokenCounterEncoding);
     }
 
     /**
@@ -288,6 +359,8 @@ public final class HierarchicalSplitterProperties {
         private boolean processBlockquotes = true;
         private boolean processHorizontalRules = true;
         private boolean enabled = true;
+        private TokenCounterType tokenCounterType = TokenCounterType.OPENAI;
+        private String tokenCounterEncoding = "cl100k_base";
 
         /**
          * Creates a new Builder.
@@ -384,6 +457,28 @@ public final class HierarchicalSplitterProperties {
         }
 
         /**
+         * Sets the token counter type.
+         *
+         * @param tokenCounterType the token counter type
+         * @return this builder
+         */
+        public Builder tokenCounterType(@NonNull final TokenCounterType tokenCounterType) {
+            this.tokenCounterType = tokenCounterType;
+            return this;
+        }
+
+        /**
+         * Sets the token counter encoding.
+         *
+         * @param tokenCounterEncoding the encoding
+         * @return this builder
+         */
+        public Builder tokenCounterEncoding(@NonNull final String tokenCounterEncoding) {
+            this.tokenCounterEncoding = tokenCounterEncoding;
+            return this;
+        }
+
+        /**
          * Builds the properties.
          *
          * @return the properties
@@ -399,6 +494,8 @@ public final class HierarchicalSplitterProperties {
             props.processBlockquotes = this.processBlockquotes;
             props.processHorizontalRules = this.processHorizontalRules;
             props.enabled = this.enabled;
+            props.tokenCounterType = this.tokenCounterType;
+            props.tokenCounterEncoding = this.tokenCounterEncoding;
             return props;
         }
     }

@@ -1,5 +1,8 @@
 package de.papenhagen.hierarchical_splitter.core;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 /**
  * Interface for counting tokens in text.
  */
@@ -12,13 +15,14 @@ public interface TokenCounter {
      * @param text the text to count
      * @return the number of tokens
      */
-    int count(String text);
+    int count(@Nullable String text);
 
     /**
      * Creates a TokenCounter that counts words.
      *
      * @return the word count token counter
      */
+    @NonNull
     static TokenCounter wordCount() {
         return text -> {
             if (text == null || text.isBlank()) {

@@ -21,13 +21,21 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build with Maven
-        run: mvn clean verify
+      - name: Build with Maven (including static analysis)
+        run: mvn clean verify -P check
 
       - name: Upload test reports
         uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-reports
-          path: target/surefire-reports/
+          path: '**/target/surefire-reports/'
+          retention-days: 7
+
+      - name: Upload static analysis reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: static-analysis-reports
+          path: '**/target/code-analysis/'
           retention-days: 7
