@@ -6,6 +6,7 @@ import de.papenhagen.hierarchical_splitter.core.TokenCounter;
 import de.papenhagen.hierarchical_splitter.properties.HierarchicalSplitterProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -25,6 +26,7 @@ public final class HierarchicalSplitterAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "spring.ai.splitter", name = "enabled", havingValue = "true", matchIfMissing = true)
     @Primary
     public HierarchicalTextSplitter hierarchicalTextSplitter(
             final HierarchicalSplitterProperties properties) {
