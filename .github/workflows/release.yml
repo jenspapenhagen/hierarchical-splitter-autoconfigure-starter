@@ -21,7 +21,7 @@ jobs:
           cache: 'maven'
 
       - name: Read Maven settings
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .github/settings.xml
           key: maven-settings-${{ github.run_id }}
